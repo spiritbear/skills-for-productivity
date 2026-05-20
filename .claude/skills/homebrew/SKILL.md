@@ -1,7 +1,7 @@
 ---
 name: homebrew
 description: Set up Homebrew and install packages on macOS
-argument-hint: [package1] [package2] ...
+argument-hint: "[package1] [package2] ..."
 ---
 
 Set up Homebrew on macOS and optionally install packages.
