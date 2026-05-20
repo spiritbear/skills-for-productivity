@@ -10,6 +10,26 @@ You are pulling a single Garmin Connect activity by ID and writing a formatted s
 - `garmin` CLI is installed at `/opt/homebrew/bin/garmin` (the [garmin-cli](https://github.com/vicentereig/garmin-cli) Rust tool)
 - The user is already authenticated. If a `garmin` call fails with an auth error, tell the user to run `garmin auth login` and stop — do not attempt to authenticate on their behalf.
 
+## Resilience
+
+Each step has a happy path and known failure modes. When a step fails, capture the exit code and stderr, match against the failure modes below, apply the fix, and retry the step. **Cap: 5 attempts per step.** If you hit 5 without success, stop the skill and report:
+
+- The step that failed
+- For each attempt: the command, the stderr, and the fix you tried
+- What you'd recommend the user do next
+
+**Recoverable failures — diagnose and retry (or adapt and continue):**
+- JSON missing an expected metric field (older device, manual activity) — omit that row; do not retry
+- Rowing field names vary (`averageStrokeCadence` / `averageStrokes` / `avgStrokeCadence`, `totalNumberOfStrokes` / `totalStrokes`) — inspect what's present in the JSON and use it
+- `## Activities` section missing in the daily note — insert it per Step 7
+- Transient network error from `garmin activities get` — wait 5 seconds, retry once
+
+**Always escalate — never auto-fix and never retry:**
+- `garmin` returns an auth error → tell the user to run `garmin auth login`, stop
+- Activity ID returns 404 / not found → tell the user the ID may be wrong, stop
+- Daily note does not exist → tell the user, stop (do not create the file)
+- Persistent network failures after one retry
+
 ## Step 1: Parse the activity ID
 
 The user invokes this as `/garmin-activity <activity-id>` or asks in natural language. The activity ID is the long numeric string Garmin Connect uses (e.g., `22929985702`). It is always required — if no ID is provided, ask the user for it.

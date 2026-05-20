@@ -6,6 +6,27 @@ argument-hint: python|ruby|elixir
 
 Install a language runtime using mise. Supported languages: `python`, `ruby`, `elixir`.
 
+## Resilience
+
+Each step has a happy path and known failure modes. When a step fails, capture the exit code and stderr, match against the failure modes below, apply the fix, and retry the step. **Cap: 5 attempts per step.** If you hit 5 without success, stop the skill and report:
+
+- The step that failed
+- For each attempt: the command, the stderr, and the fix you tried
+- What you'd recommend the user do next
+
+**Recoverable failures — diagnose and retry:**
+- `mise: command not found` after `brew install mise` → run `eval "$(mise activate zsh)"` in the current shell, then re-check
+- Python install fails with OpenSSL / xz / readline / sqlite3 build errors → `brew install openssl xz readline sqlite3`, then retry
+- Ruby install fails with OpenSSL / readline / libyaml build errors → `brew install openssl@3 readline libyaml`, then retry
+- Elixir install fails because Erlang is missing → `mise use --global erlang@latest`, then retry the Elixir install
+- `python --version` / `ruby --version` / `elixir --version` not found right after install → run `eval "$(mise activate zsh)"` in the current shell, then re-check
+- Transient network errors during `mise use` → wait 5 seconds, retry
+
+**Always escalate — never auto-fix:**
+- A specific version that doesn't exist (e.g., `python@99.99`) — report and ask for a valid version
+- Xcode Command Line Tools missing and an interactive installer would be required — ask the user to run `xcode-select --install` and re-run the skill
+- Persistent network failures after one retry
+
 ## Step 1: Check mise is installed
 
 ```bash

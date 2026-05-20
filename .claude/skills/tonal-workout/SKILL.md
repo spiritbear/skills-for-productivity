@@ -11,6 +11,29 @@ You are updating the user's Obsidian daily notes with their Tonal workout data. 
 - 1Password CLI (`op`) must be signed in — credentials are resolved via `op run` from `op://Private/Tonal`
 - The fetch script is at `~/.local/share/toneget/fetch_recent.py`
 
+## Resilience
+
+Each step has a happy path and known failure modes. When a step fails, capture the exit code and stderr, match against the failure modes below, apply the fix, and retry the step. **Cap: 5 attempts per step.** If you hit 5 without success, stop the skill and report:
+
+- The step that failed
+- For each attempt: the command, the stderr, and the fix you tried
+- What you'd recommend the user do next
+
+**Recoverable failures — diagnose and retry (or adapt and continue):**
+- Schema variants in JSON keys (exercise / weight / reps / volume) — adapt per the variant list in Step 3; do not retry
+- No workouts in the requested window — not a failure; report and stop
+- `## Workout` section missing in a target daily note — insert it per Step 5
+- Transient network or rate-limit error from the fetch script — wait 5 seconds, retry once
+
+**Always escalate — never auto-fix and never retry:**
+- `op` not signed in → ask the user to run `op signin`, stop
+- `op://Private/Tonal` item missing or unreadable → ask the user to set it up, stop
+- Tonal API auth failure (bad email/password in 1Password) → ask the user to update the 1Password item, stop
+- Daily note for a given date does not exist → skip that date, do not create the file
+- Daily note already has populated workout data — ask before overwriting
+- Persistent network failures after one retry
+- JSON structure doesn't match expected fields even after adapting — print the first workout's keys and stop
+
 ## Step 1: Parse Arguments
 
 The user may provide arguments to control scope:
@@ -134,6 +157,4 @@ After updating, summarize what was done:
 
 ## Error Handling
 
-- If no workouts are found for the requested period, inform the user
-- If a daily note already has populated workout data, ask before overwriting
-- If the JSON structure doesn't match expected fields, print the first workout's keys so the user and you can debug together
+See the **Resilience** section near the top for failure modes, recovery actions, and the 5-attempt cap. The cases previously listed here (no workouts, existing populated workout data, unknown JSON structure) are covered there.

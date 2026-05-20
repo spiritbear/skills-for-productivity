@@ -6,6 +6,25 @@ argument-hint: "[package1] [package2] ..."
 
 Set up Homebrew on macOS and optionally install packages.
 
+## Resilience
+
+Each step has a happy path and known failure modes. When a step fails, capture the exit code and stderr, match against the failure modes below, apply the fix, and retry the step. **Cap: 5 attempts per step.** If you hit 5 without success, stop the skill and report:
+
+- The step that failed
+- For each attempt: the command, the stderr, and the fix you tried
+- What you'd recommend the user do next
+
+**Recoverable failures — diagnose and retry:**
+- `brew: command not found` after install → run `eval "$(/opt/homebrew/bin/brew shellenv)"` (Apple Silicon) or `eval "$(/usr/local/bin/brew shellenv)"` (Intel) in the current shell, then re-check
+- `brew install <pkg>` fails with transient errors (HTTP timeouts, bottle download failures, mirror 5xx) → wait 5 seconds, retry
+- `brew install <pkg>` fails because Xcode Command Line Tools are missing for a build-from-source formula → run `xcode-select --install` only if it can complete non-interactively; otherwise escalate
+
+**Always escalate — never auto-fix:**
+- `gh auth status` not authenticated, and any 1Password plugin prompts (biometrics, master password, PAT creation in the browser)
+- `op` not installed or not signed in
+- A package name (default or from $ARGUMENTS) that Homebrew rejects with `Cask is unavailable` or `No available formula` — report the bad name and continue with the rest
+- Persistent network failures after one retry
+
 ## Step 1: Check if Homebrew is installed
 
 Run:
