@@ -11,3 +11,7 @@ Installs a language runtime (Python, Ruby, or Elixir) via `mise` and sets it as 
 ## garmin-activity
 
 Pulls a single Garmin Connect activity by ID using the `garmin` CLI and appends a formatted summary to the matching daily note in the user's Obsidian vault. Trigger phrases include "log my run", "log my hike", "fetch this activity", or providing a Garmin activity ID directly. Requires the user to already be authenticated with `garmin auth login`.
+
+## tonal-workout
+
+Pulls recent Tonal workout data via the `toneget` fetch script and writes detailed summaries (exercises, sets, reps, volume) into the matching daily notes. Accepts an optional argument: a number of days (`--days N`, defaults to 7) or a specific date (`YYYY-MM-DD`). Credentials are injected at runtime via the 1Password CLI from `op://Private/Tonal`.
